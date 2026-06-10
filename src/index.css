@@ -1,0 +1,133 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-slate-50 text-slate-800;
+  }
+}
+
+.radial-progress {
+  position: relative;
+  display: inline-grid;
+  place-content: center;
+  border-radius: 50%;
+}
+
+/* --- Deep Navy & Sand Gold Theme Overrides --- */
+
+/* App Background (Surface Light) */
+body.theme-gold {
+  background: #f8f9fa !important;
+  color: #1f2937 !important;
+}
+body.theme-gold .bg-slate-50 {
+  background: transparent !important;
+}
+
+/* Cards & Content Sections (Surface Light / Clean White) */
+body.theme-gold .bg-white {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: #e5e7eb !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Header (Deep Navy) */
+body.theme-gold header.bg-white {
+  background: #0a1d37 !important;
+  border-bottom: 2px solid #c5a059 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+body.theme-gold header h1,
+body.theme-gold header p,
+body.theme-gold header .text-slate-800,
+body.theme-gold header .text-slate-500,
+body.theme-gold header .text-slate-600 {
+  color: #ffffff !important;
+}
+body.theme-gold header .bg-slate-100 {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(8px) !important;
+}
+body.theme-gold header .bg-slate-100::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+body.theme-gold header i.text-slate-400 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Inputs and Secondary backgrounds (Body) */
+body.theme-gold .bg-slate-100 {
+  background: #f1f5f9 !important; 
+  color: #1f2937 !important;
+  border-color: #e2e8f0 !important;
+  backdrop-filter: none !important;
+}
+body.theme-gold .hover\:bg-slate-200:hover {
+  background: #e2e8f0 !important;
+}
+body.theme-gold .hover\:bg-slate-50:hover {
+  background: #f8fafc !important;
+}
+
+/* Text Colors */
+body.theme-gold .text-slate-800 {
+  color: #111827 !important; 
+}
+body.theme-gold .text-slate-600 {
+  color: #4b5563 !important; 
+}
+body.theme-gold .text-slate-500 {
+  color: #6b7280 !important; 
+}
+body.theme-gold .text-slate-400 {
+  color: #9ca3af !important;
+}
+
+/* Borders */
+body.theme-gold .border-slate-200,
+body.theme-gold .border-slate-100 {
+  border-color: #e5e7eb !important;
+}
+body.theme-gold .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e5e7eb !important;
+}
+
+/* Accents, Icons, CTA (Sand Gold) */
+body.theme-gold .bg-blue-600,
+body.theme-gold .bg-blue-500 {
+  background: #c5a059 !important;
+  color: #ffffff !important; 
+  border-color: #c5a059 !important;
+}
+
+body.theme-gold .text-blue-600,
+body.theme-gold .text-blue-500,
+body.theme-gold .text-blue-700 {
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+  color: #c5a059 !important;
+}
+
+body.theme-gold .border-blue-600,
+body.theme-gold .border-blue-500,
+body.theme-gold .border-blue-200,
+body.theme-gold .border-blue-100 {
+  border-color: #c5a059 !important;
+}
+
+body.theme-gold .ring-blue-100,
+body.theme-gold .ring-blue-500 {
+  --tw-ring-color: rgba(197, 160, 89, 0.4) !important;
+}
+
+body.theme-gold .shadow-blue-100 {
+  --tw-shadow-color: rgba(197, 160, 89, 0.2) !important;
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
