@@ -173,7 +173,7 @@ function ExcelImporter({ onImport }) {
   };
 
   return (
-    <div className="mt-8 pt-6 border-t border-slate-200">
+    <>
       <input 
         type="file" 
         accept=".xlsx, .xls, .csv" 
@@ -183,15 +183,13 @@ function ExcelImporter({ onImport }) {
       />
       <button 
         onClick={() => fileInputRef.current?.click()}
-        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl flex items-center justify-center gap-2 transition-all font-semibold border border-slate-200"
+        className="flex items-center justify-center gap-2 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white px-4 py-3 rounded-xl text-sm font-bold transition-all shadow-sm"
+        title="استيراد من Excel"
       >
-        <i className="fa-solid fa-file-excel text-emerald-600 text-lg"></i>
-        <span>استيراد من Excel</span>
+        <i className="fa-solid fa-file-import"></i>
+        استيراد (Excel)
       </button>
-      <p className="text-[10px] text-slate-400 text-center mt-2 px-2">
-        سيتم حفظ البيانات المدخلة تلقائياً للاستخدام دون إنترنت
-      </p>
-    </div>
+    </>
   );
 }
 

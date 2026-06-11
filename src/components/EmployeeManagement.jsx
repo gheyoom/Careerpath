@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import * as XLSX from 'xlsx';
+import ExcelImporter from './ExcelImporter';
 
-const EmployeeManagement = ({ employees, onUpdate, onDelete }) => {
+const EmployeeManagement = ({ employees, onUpdate, onDelete, onImport }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
 
@@ -76,6 +77,7 @@ const EmployeeManagement = ({ employees, onUpdate, onDelete }) => {
             <i className="fa-solid fa-search absolute right-4 top-3.5 text-slate-400"></i>
           </div>
           
+          <ExcelImporter onImport={onImport} />
           <button 
             onClick={handleExportBackup}
             className="flex items-center justify-center gap-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-600 hover:text-white px-4 py-3 rounded-xl text-sm font-bold transition-all shadow-sm"

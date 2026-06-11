@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { pathsConfig as defaultPathsConfig, courseMetadata as defaultCourseMetadata } from './data/coursesData';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import DiscoveryDashboard from './components/DiscoveryDashboard';
@@ -9,7 +10,7 @@ import Presentation from './components/Presentation';
 import ExcelImporter from './components/ExcelImporter';
 import EmployeeManagement from './components/EmployeeManagement';
 import CourseUploader from './components/CourseUploader';
-import { initialEmployees, isHiddenItTalent } from './data/mockData';
+import { initialEmployees, isHiddenItTalent, orgStructure as defaultOrgStructure } from './data/mockData';
 
 function App() {
   const [employees, setEmployees] = useState(() => {
@@ -27,6 +28,54 @@ function App() {
   useEffect(() => {
     localStorage.setItem('careerpath_employees', JSON.stringify(employees));
   }, [employees]);
+
+  const [structure, setStructure] = useState(() => {
+    const saved = localStorage.getItem('careerpath_org_structure');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved structure", e);
+      }
+    }
+    return defaultOrgStructure;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('careerpath_org_structure', JSON.stringify(structure));
+  }, [structure]);
+
+  const [pathsConfigState, setPathsConfigState] = useState(() => {
+    const saved = localStorage.getItem('careerpath_paths_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return defaultPathsConfig;
+  });
+
+  const [courseMetadataState, setCourseMetadataState] = useState(() => {
+    const saved = localStorage.getItem('careerpath_course_metadata');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return defaultCourseMetadata;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('careerpath_paths_config', JSON.stringify(pathsConfigState));
+  }, [pathsConfigState]);
+
+  useEffect(() => {
+    localStorage.setItem('careerpath_course_metadata', JSON.stringify(courseMetadataState));
+  }, [courseMetadataState]);
 
   const handleImportEmployees = (newEmployees) => {
     setEmployees(prev => {
@@ -54,6 +103,8 @@ function App() {
 
   // Statistics
   const totalTechGraduates = employees.length;
+  const targetPositions = structure.reduce((sum, item) => sum + (Number(item.target) || 0), 0);
+  const occupancyRate = targetPositions > 0 ? Math.round((totalTechGraduates / targetPositions) * 100) : 100;
   const needsCoursesCount = employees.filter(emp => emp.currentRequirements && emp.currentRequirements.length > 0).length;
   const promotionReadyCount = employees.filter(emp => emp.readinessScore >= 85).length;
   const hiddenTalentsCount = employees.filter(isHiddenItTalent).length;
@@ -72,68 +123,116 @@ function App() {
 
         <main className="flex-1 p-6 flex flex-col gap-6 overflow-x-hidden">
           {/* Dashboard Stats */}
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Employees Card */}
             <div 
               onClick={() => setQuickFilter('all')}
-              className={`bg-white border p-5 rounded-xl shadow-sm flex justify-between items-center cursor-pointer transition-all ${
+              className={`group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border ${
                 quickFilter === 'all' 
-                  ? 'border-blue-500 ring-2 ring-blue-100' 
-                  : 'border-slate-200 hover:border-slate-300'
+                  ? 'border-blue-500 ring-4 ring-blue-50/80 scale-[1.02] z-10' 
+                  : 'border-slate-100 hover:border-blue-200'
               }`}
             >
-              <div>
-                <p className="text-xs text-slate-400 font-semibold mb-1">اجمالي الموظفين التقنيين</p>
-                <h3 className="text-2xl font-bold text-slate-800">
-                  {totalTechGraduates} موظفين
-                </h3>
-                <p className="text-[10px] text-slate-500 mt-1">العدد الإجمالي للموظفين ذوي المؤهلات والتخصصات التقنية في كافة أقسام المؤسسة</p>
-              </div>
-              <div className="bg-blue-50 text-blue-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0">
-                <i className="fa-solid fa-graduation-cap"></i>
+              <div className="absolute top-0 left-0 w-32 h-32 bg-blue-500/5 rounded-full -ml-10 -mt-10 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex-1 w-full pl-3">
+                  <p className="text-xs font-bold text-slate-500 mb-2">القوة العاملة (الفعلي مقابل المعتمد)</p>
+                  <div className="flex items-end gap-2 mb-3">
+                    <h3 className="text-3xl font-black text-slate-800 leading-none">{totalTechGraduates}</h3>
+                    <span className="text-sm font-bold text-slate-400 mb-0.5">/ {targetPositions} منصب</span>
+                  </div>
+                  
+                  {/* Progress Bar */}
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 mb-2 overflow-hidden shadow-inner">
+                    <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-1000 ease-out" style={{ width: `${occupancyRate}%` }}></div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-blue-600">التغطية: {occupancyRate}%</span>
+                    <span className="text-rose-500">{targetPositions - totalTechGraduates} شواغر</span>
+                  </div>
+                </div>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm transition-colors duration-300 ${quickFilter === 'all' ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                  <i className="fa-solid fa-users-rays"></i>
+                </div>
               </div>
             </div>
 
+            {/* Needs Courses Card */}
             <div 
               onClick={() => setQuickFilter('needs_courses')}
-              className={`bg-white border p-5 rounded-xl shadow-sm flex justify-between items-center cursor-pointer transition-all ${quickFilter === 'needs_courses' ? 'border-amber-500 ring-2 ring-amber-100' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border ${
+                quickFilter === 'needs_courses' 
+                  ? 'border-amber-500 ring-4 ring-amber-50/80 scale-[1.02] z-10' 
+                  : 'border-slate-100 hover:border-amber-200'
+              }`}
             >
-              <div>
-                <p className="text-xs text-slate-400 font-semibold mb-1">بحاجة لدورات في المنصب الحالي</p>
-                <h3 className="text-2xl font-bold text-amber-600">{needsCoursesCount} موظفين</h3>
-                <p className="text-[10px] text-amber-500 font-semibold mt-1">
-                  <i className="fa-solid fa-book-open ml-1"></i> لديهم متطلبات تدريبية غير مكتملة
-                </p>
-              </div>
-              <div className="bg-amber-50 text-amber-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0">
-                <i className="fa-solid fa-book-open"></i>
+              <div className="absolute top-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full -ml-10 -mt-10 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-slate-500 mb-2">بحاجة لدورات (المنصب الحالي)</p>
+                  <h3 className="text-3xl font-black text-amber-600 mb-1">
+                    {needsCoursesCount} <span className="text-sm font-semibold opacity-70">موظفين</span>
+                  </h3>
+                  <p className="text-[10px] text-amber-600/80 font-bold leading-relaxed mt-2 pr-1">
+                    <i className="fa-solid fa-triangle-exclamation ml-1 opacity-70"></i>لديهم متطلبات تدريبية غير مكتملة
+                  </p>
+                </div>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm transition-colors duration-300 ${quickFilter === 'needs_courses' ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-amber-50 text-amber-500 group-hover:bg-amber-500 group-hover:text-white'}`}>
+                  <i className="fa-solid fa-book-open-reader"></i>
+                </div>
               </div>
             </div>
 
+            {/* Ready for Promotion Card */}
             <div 
               onClick={() => setQuickFilter('ready_for_promotion')}
-              className={`bg-white border p-5 rounded-xl shadow-sm flex justify-between items-center cursor-pointer transition-all ${quickFilter === 'ready_for_promotion' ? 'border-emerald-500 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border ${
+                quickFilter === 'ready_for_promotion' 
+                  ? 'border-emerald-500 ring-4 ring-emerald-50/80 scale-[1.02] z-10' 
+                  : 'border-slate-100 hover:border-emerald-200'
+              }`}
             >
-              <div>
-                <p className="text-xs text-slate-400 font-semibold mb-1">المؤهلون للترقية الفورية</p>
-                <h3 className="text-2xl font-bold text-emerald-600">{promotionReadyCount} كفاءات</h3>
-                <p className="text-[10px] text-emerald-600 font-semibold mt-1">تخطوا مؤشر الجاهزية Score ≥ 85%</p>
-              </div>
-              <div className="bg-emerald-50 text-emerald-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0">
-                <i className="fa-solid fa-award"></i>
+              <div className="absolute top-0 left-0 w-32 h-32 bg-emerald-500/5 rounded-full -ml-10 -mt-10 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-slate-500 mb-2">المؤهلون للترقية الفورية</p>
+                  <h3 className="text-3xl font-black text-emerald-600 mb-1">
+                    {promotionReadyCount} <span className="text-sm font-semibold opacity-70">كفاءات</span>
+                  </h3>
+                  <p className="text-[10px] text-emerald-600/80 font-bold leading-relaxed mt-2 pr-1">
+                    <i className="fa-solid fa-arrow-trend-up ml-1 opacity-70"></i>تخطوا مؤشر الجاهزية (Score ≥ 85%)
+                  </p>
+                </div>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm transition-colors duration-300 ${quickFilter === 'ready_for_promotion' ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-50 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white'}`}>
+                  <i className="fa-solid fa-medal"></i>
+                </div>
               </div>
             </div>
 
+            {/* Hidden Talents Card */}
             <div 
               onClick={() => setQuickFilter('hidden_talents')}
-              className={`bg-white border p-5 rounded-xl shadow-sm flex justify-between items-center cursor-pointer transition-all ${quickFilter === 'hidden_talents' ? 'border-indigo-500 ring-2 ring-indigo-100' : 'border-slate-200 hover:border-slate-300'}`}
+              className={`group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border ${
+                quickFilter === 'hidden_talents' 
+                  ? 'border-indigo-500 ring-4 ring-indigo-50/80 scale-[1.02] z-10' 
+                  : 'border-slate-100 hover:border-indigo-200'
+              }`}
             >
-              <div>
-                <p className="text-xs text-slate-400 font-semibold mb-1">المواهب وتوصيات التوجيه الذكي</p>
-                <h3 className="text-2xl font-bold text-indigo-650">{hiddenTalentsCount} كفاءات</h3>
-                <p className="text-[10px] text-indigo-500 font-semibold mt-1">توصيات إعادة التوجيه للمهارات المتباينة ووظائف غير تقنية</p>
-              </div>
-              <div className="bg-indigo-50 text-indigo-650 w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0">
-                <i className="fa-solid fa-user-secret"></i>
+              <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-500/5 rounded-full -ml-10 -mt-10 transition-transform group-hover:scale-150 duration-700 pointer-events-none"></div>
+              <div className="flex justify-between items-start relative z-10">
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-slate-500 mb-2">توصيات التوجيه الذكي</p>
+                  <h3 className="text-3xl font-black text-indigo-600 mb-1">
+                    {hiddenTalentsCount} <span className="text-sm font-semibold opacity-70">كفاءات</span>
+                  </h3>
+                  <p className="text-[10px] text-indigo-600/80 font-bold leading-relaxed mt-2 pr-1">
+                    <i className="fa-solid fa-lightbulb ml-1 opacity-70"></i>إعادة التوجيه (وظائف غير تقنية/مهارات متباينة)
+                  </p>
+                </div>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm transition-colors duration-300 ${quickFilter === 'hidden_talents' ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                  <i className="fa-solid fa-wand-magic-sparkles"></i>
+                </div>
               </div>
             </div>
           </section>
@@ -144,6 +243,8 @@ function App() {
               selectedEmployee={selectedEmployee} 
               setSelectedEmployee={setSelectedEmployee} 
               quickFilter={quickFilter}
+              structure={structure}
+              setStructure={setStructure}
             />
           )}
 
@@ -153,6 +254,7 @@ function App() {
               setEmployees={setEmployees}
               selectedEmployee={selectedEmployee}
               setSelectedEmployee={setSelectedEmployee}
+              pathsConfig={pathsConfigState}
             />
           )}
 
@@ -162,11 +264,16 @@ function App() {
               setEmployees={setEmployees}
               selectedEmployee={selectedEmployee}
               setSelectedEmployee={setSelectedEmployee}
+              pathsConfig={pathsConfigState}
+              courseMetadata={courseMetadataState}
             />
           )}
 
           {activeScreen === "requirements" && (
-            <PositionRequirements />
+            <PositionRequirements 
+              pathsConfig={pathsConfigState} 
+              courseMetadata={courseMetadataState} 
+            />
           )}
 
           {activeScreen === "management" && (
@@ -174,13 +281,19 @@ function App() {
               employees={employees} 
               onUpdate={handleUpdateEmployee} 
               onDelete={handleDeleteEmployee} 
+              onImport={handleImportEmployees}
             />
           )}
 
           {activeScreen === "course_upload" && (
             <CourseUploader 
               employees={employees} 
-              onUpdateEmployees={setEmployees}
+              onUpdateEmployees={handleImportEmployees} 
+              pathsConfig={pathsConfigState}
+              setPathsConfig={setPathsConfigState}
+              courseMetadata={courseMetadataState}
+              setCourseMetadata={setCourseMetadataState}
+              setEmployees={setEmployees}
             />
           )}
 

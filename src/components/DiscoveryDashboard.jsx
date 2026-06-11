@@ -1,21 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FilterBar from './FilterBar';
 import EmployeeGrid from './EmployeeGrid';
 import DetailedProfile from './DetailedProfile';
+import VacanciesView from './VacanciesView';
 import { isHiddenItTalent } from '../data/mockData';
 
-const DiscoveryDashboard = ({ employees, selectedEmployee, setSelectedEmployee, quickFilter }) => {
+const DiscoveryDashboard = ({ employees, selectedEmployee, setSelectedEmployee, quickFilter, structure, setStructure }) => {
   const [filterSpecialization, setFilterSpecialization] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
   const [filterJobCategory, setFilterJobCategory] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
   const [viewMode, setViewMode] = useState("list");
   const [showExecutiveModal, setShowExecutiveModal] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [vitalFilter, setVitalFilter] = useState("all");
   const [globalSearch, setGlobalSearch] = useState("");
 
-  const militaryCount = employees.filter(emp => emp.employeeType === 'military').length;
-  const civilianCount = employees.length - militaryCount;
+  const handleCloseModal = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowExecutiveModal(false);
+      setIsClosing(false);
+    }, 300); // 300ms matches animation duration
+  };
+
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!showExecutiveModal) return;
+      if (panelRef.current && panelRef.current.contains(event.target)) {
+        return; // clicked inside the panel
+      }
+      if (event.target.closest('tbody tr')) {
+        return; // clicked a table row, let the row handle selecting the new employee
+      }
+      handleCloseModal();
+    };
+
+    if (showExecutiveModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExecutiveModal]);
+
+  const isCivilian = (emp) => emp.hrDetails?.jobGrade?.includes("مدني");
+
+  const civilianCount = employees.filter(isCivilian).length;
+  const militaryCount = employees.length - civilianCount;
   const outsideAbuDhabiCount = employees.filter(emp => emp.hrDetails && emp.hrDetails.location && emp.hrDetails.location !== "أبوظبي").length;
 
   const filteredEmployees = employees.filter(emp => {
@@ -32,8 +66,8 @@ const DiscoveryDashboard = ({ employees, selectedEmployee, setSelectedEmployee, 
                        (quickFilter === "hidden_talents" && isHiddenItTalent(emp));
                        
     const matchVital = vitalFilter === "all" ||
-      (vitalFilter === "military" && emp.employeeType === "military") ||
-      (vitalFilter === "civilian" && emp.employeeType !== "military") ||
+      (vitalFilter === "military" && !isCivilian(emp)) ||
+      (vitalFilter === "civilian" && isCivilian(emp)) ||
       (vitalFilter === "outside_ad" && emp.hrDetails?.location && emp.hrDetails.location !== "أبوظبي");
       
     const searchString = globalSearch.toLowerCase();
@@ -71,37 +105,44 @@ const DiscoveryDashboard = ({ employees, selectedEmployee, setSelectedEmployee, 
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        <div className={viewMode === 'executive' ? "xl:col-span-12" : "xl:col-span-7"}>
-          <EmployeeGrid 
-            filteredEmployees={filteredEmployees}
-            selectedEmployee={selectedEmployee}
-            setSelectedEmployee={(emp) => {
-              setSelectedEmployee(emp);
-              if (viewMode === 'executive') setShowExecutiveModal(true);
-            }}
-            viewMode={viewMode}
-          />
+        <div className={(viewMode === 'executive' || viewMode === 'vacancies') ? "xl:col-span-12" : "xl:col-span-7"}>
+          {viewMode === 'vacancies' ? (
+            <VacanciesView employees={filteredEmployees} orgStructure={structure} setOrgStructure={setStructure} />
+          ) : viewMode === 'grid' || viewMode === 'list' || viewMode === 'executive' ? (
+            <EmployeeGrid 
+              filteredEmployees={filteredEmployees}
+              selectedEmployee={selectedEmployee}
+              setSelectedEmployee={(emp) => {
+                setSelectedEmployee(emp);
+                if (viewMode === 'executive') setShowExecutiveModal(true);
+              }}
+              viewMode={viewMode}
+            />
+          ) : null}
         </div>
 
-        {viewMode !== 'executive' && (
+        {viewMode !== 'executive' && viewMode !== 'vacancies' && (
           <div className="xl:col-span-5 bg-white border border-slate-200 rounded-xl p-6 shadow-sm sticky top-24">
             <DetailedProfile employee={selectedEmployee} />
           </div>
         )}
       </div>
 
-      {viewMode === 'executive' && showExecutiveModal && selectedEmployee && (
-        <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-start transition-opacity animate-fade-in"
-          onClick={() => setShowExecutiveModal(false)}
-        >
+      {/* Left side modal for Executive View */}
+      {viewMode === 'executive' && (showExecutiveModal || isClosing) && selectedEmployee && (
+        <div className={`fixed inset-0 z-40 flex justify-end pointer-events-none transition-opacity duration-300 ${isClosing ? 'opacity-0' : 'opacity-100 animate-fade-in'}`}>
+          {/* Faint Backdrop */}
+          <div className="absolute inset-0 bg-slate-800/10 backdrop-blur-[1px]"></div>
+          
           <div 
-            className="bg-slate-50 w-full max-w-2xl h-full shadow-2xl overflow-y-auto animate-fade-in-right relative border-r border-slate-200"
+            ref={panelRef}
+            className={`bg-slate-50 w-full max-w-2xl h-full shadow-2xl overflow-y-auto relative border-l border-slate-200 pointer-events-auto ${isClosing ? 'animate-slide-out-left' : 'animate-slide-in-left'}`}
             onClick={(e) => e.stopPropagation()}
           >
             <button 
-              onClick={() => setShowExecutiveModal(false)}
-              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-slate-200 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors z-10"
+              onClick={handleCloseModal}
+              className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-slate-200 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors z-10"
+              title="إغلاق"
             >
               <i className="fa-solid fa-xmark text-lg"></i>
             </button>

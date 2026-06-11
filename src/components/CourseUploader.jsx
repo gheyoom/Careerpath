@@ -1,9 +1,10 @@
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { allStandardCoursesList, recalculateEmployeeReadiness } from '../data/coursesData';
+import { getAllStandardCoursesList, recalculateEmployeeReadiness } from '../data/coursesData';
 
-const CourseUploader = ({ employees, onUpdateEmployees }) => {
+const CourseUploader = ({ employees, onUpdateEmployees, pathsConfig, setPathsConfig, courseMetadata, setCourseMetadata, setEmployees }) => {
   const fileInputRef = useRef(null);
+  const coursesInputRef = useRef(null);
   const [step, setStep] = useState(1); // 1: Upload, 2: Mapping, 3: Success
   const [parsedData, setParsedData] = useState([]); // [{ empId, courseName }]
   const [uniqueCourses, setUniqueCourses] = useState([]); // ["Actual Course 1", "Actual Course 2"]
@@ -50,9 +51,10 @@ const CourseUploader = ({ employees, onUpdateEmployees }) => {
         
         // Initialize mappings to empty
         const initialMappings = {};
+        const allStd = getAllStandardCoursesList(courseMetadata);
         uniqueArr.forEach(c => {
           // Attempt exact match first
-          if (allStandardCoursesList.includes(c)) {
+          if (allStd.includes(c)) {
             initialMappings[c] = c;
           } else {
             initialMappings[c] = "";
@@ -95,7 +97,7 @@ const CourseUploader = ({ employees, onUpdateEmployees }) => {
         
         const updatedEmp = { ...emp, completedCourses: merged };
         // Recalculate readiness
-        return recalculateEmployeeReadiness(updatedEmp);
+        return recalculateEmployeeReadiness(updatedEmp, pathsConfig);
       }
       return emp;
     });
@@ -113,15 +115,130 @@ const CourseUploader = ({ employees, onUpdateEmployees }) => {
     XLSX.writeFile(wb, "Courses_Template.xlsx");
   };
 
+  const handleExportCourses = () => {
+    const exportData = [];
+    Object.keys(courseMetadata).forEach(courseName => {
+      const meta = courseMetadata[courseName];
+      const paths = pathsConfig.filter(p => p.required?.includes(courseName)).map(p => p.title).join("، ");
+      exportData.push({
+        'اسم الدورة (Course)': courseName,
+        'النوع (Type)': meta.type || "دورة",
+        'المستوى (Level)': meta.level || "مبتدئ",
+        'النقاط (Score)': meta.score || 1,
+        'المسارات (Paths)': paths
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "دليل الدورات والشهادات");
+    XLSX.writeFile(workbook, "Approved_Courses_Config.xlsx");
+  };
+
+  const handleImportCourses = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        const newMetadata = {};
+        const newPathsConfig = JSON.parse(JSON.stringify(pathsConfig)); // deep copy
+        
+        newPathsConfig.forEach(p => p.required = []);
+
+        data.forEach(row => {
+          const cName = row['اسم الدورة (Course)'] || row['Course'] || row['اسم الدورة'];
+          if (!cName) return;
+          
+          const courseName = cName.toString().trim();
+          
+          newMetadata[courseName] = {
+            type: row['النوع (Type)'] || row['Type'] || "دورة",
+            level: row['المستوى (Level)'] || row['Level'] || "مبتدئ",
+            score: parseInt(row['النقاط (Score)'] || row['Score'], 10) || 1
+          };
+
+          const pathsStr = String(row['المسارات (Paths)'] || row['Paths'] || "");
+          if (pathsStr) {
+            const pathsList = pathsStr.split("،").map(p => p.trim()).filter(Boolean);
+            pathsList.forEach(pathTitle => {
+              const pathObj = newPathsConfig.find(p => p.title === pathTitle || p.id === pathTitle);
+              if (pathObj) {
+                if (!pathObj.required.includes(courseName)) {
+                  pathObj.required.push(courseName);
+                }
+              }
+            });
+          }
+        });
+
+        if (Object.keys(newMetadata).length > 0) {
+          setCourseMetadata(newMetadata);
+          setPathsConfig(newPathsConfig);
+
+          if (setEmployees) {
+            setEmployees(prevEmps => prevEmps.map(emp => recalculateEmployeeReadiness(emp, newPathsConfig)));
+          }
+
+          alert("تم تحديث دليل الدورات والشهادات والمسارات التقنية، وتمت إعادة احتساب الجاهزية لجميع الموظفين بنجاح!");
+        } else {
+          alert("ملف غير صالح أو فارغ.");
+        }
+      } catch (err) {
+        console.error("Error importing courses Excel:", err);
+        alert("حدث خطأ أثناء قراءة الملف.");
+      }
+      if (coursesInputRef.current) coursesInputRef.current.value = "";
+    };
+    reader.readAsBinaryString(file);
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-      <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">
-          <i className="fa-solid fa-cloud-arrow-up"></i>
-        </div>
+    <div className="flex flex-col gap-6 font-sans">
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">استيراد ومطابقة الدورات التدريبية</h2>
-          <p className="text-sm text-slate-500">قم برفع سجلات الدورات للموظفين ومطابقتها مع الدورات القياسية للمسارات</p>
+          <h2 className="font-title font-bold text-lg text-slate-800 flex items-center gap-2">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i className="fa-solid fa-cloud-arrow-up text-lg"></i>
+            </div>
+            <span>استيراد وتحديث البيانات</span>
+          </h2>
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-xl">
+            يمكنك من هنا رفع كشوفات دورات الموظفين لمطابقتها مع المعايير. كما يمكنك إدارة دليل الدورات والمسارات المعتمدة عبر تصديرها وتحديثها بملفات Excel.
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row w-full lg:w-auto gap-3">
+          <div className="bg-slate-50 p-2 rounded-xl flex gap-2 border border-slate-100">
+            <button 
+              onClick={handleExportCourses}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
+            >
+              <i className="fa-solid fa-file-export"></i>
+              تصدير الأدلة
+            </button>
+            <button 
+              onClick={() => coursesInputRef.current?.click()}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white text-emerald-600 border border-slate-200 hover:border-emerald-300 px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm"
+            >
+              <i className="fa-solid fa-file-import"></i>
+              تحديث الأدلة
+            </button>
+            <input 
+              type="file" 
+              ref={coursesInputRef} 
+              onChange={handleImportCourses} 
+              accept=".xlsx, .xls, .csv" 
+              className="hidden" 
+            />
+          </div>
         </div>
       </div>
 
@@ -175,29 +292,27 @@ const CourseUploader = ({ employees, onUpdateEmployees }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {uniqueCourses.map((course, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 text-slate-800 font-semibold">{course}</td>
-                    <td className="p-3">
-                      <select 
-                        value={mappings[course] || ""}
-                        onChange={(e) => handleMappingChange(course, e.target.value)}
-                        className={`w-full p-2 rounded-lg border text-xs focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all ${
-                          mappings[course] && mappings[course] !== "IGNORE" ? 'border-emerald-300 bg-emerald-50 text-emerald-800' : 
-                          mappings[course] === "IGNORE" ? 'border-slate-300 bg-slate-100 text-slate-500' : 'border-slate-300 bg-white'
-                        }`}
-                      >
-                        <option value="">-- اختر الدورة المطابقة --</option>
-                        <option value="IGNORE">❌ تجاهل (ليست دورة قياسية)</option>
-                        <optgroup label="الدورات القياسية للنظام">
-                          {allStandardCoursesList.map((std, sidx) => (
-                            <option key={sidx} value={std}>{std}</option>
+                {uniqueCourses.map((course, idx) => {
+                  const allStd = getAllStandardCoursesList(courseMetadata);
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50 border-b border-slate-100/50">
+                      <td className="py-3 px-4 font-bold text-slate-700">{course}</td>
+                      <td className="py-3 px-4">
+                        <select 
+                          value={mappings[course] || ""}
+                          onChange={(e) => handleMappingChange(course, e.target.value)}
+                          className={`w-full text-xs font-bold p-2 border rounded-lg focus:outline-none transition-all ${mappings[course] === "IGNORE" ? 'bg-slate-100 text-slate-500 border-slate-200' : mappings[course] ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-rose-300 text-rose-600'}`}
+                        >
+                          <option value="">-- يرجى اختيار الدورة المطابقة أو التجاهل --</option>
+                          <option value="IGNORE">🚫 تجاهل هذه الدورة (لا تُحتسب)</option>
+                          {allStd.map(std => (
+                            <option key={std} value={std}>{std}</option>
                           ))}
-                        </optgroup>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
+                        </select>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

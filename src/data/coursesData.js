@@ -138,34 +138,36 @@ export const courseMetadata = {
   "دورة مهارات التواصل الاحترافي وإدارة تجربة المستخدم (Technical Customer Service Excellence)": { type: "دورة", level: "مبتدئ", score: 1 }
 };
 
-export const domains = {
-  "الذكاء الاصطناعي": pathsConfig.find(p => p.id === "ai").required,
-  "الأمن السيبراني": pathsConfig.find(p => p.id === "cyber").required,
-  "البرمجة": pathsConfig.find(p => p.id === "software").required,
-  "تحليل النظم": pathsConfig.find(p => p.id === "analyst").required,
-  "الدعم الفني": [
-    ...pathsConfig.find(p => p.id === "computer_tech").required,
-    ...pathsConfig.find(p => p.id === "support_tech").required
-  ]
+export const getDomains = (config) => {
+  return {
+    "الذكاء الاصطناعي": config.find(p => p.id === "ai")?.required || [],
+    "الأمن السيبراني": config.find(p => p.id === "cyber")?.required || [],
+    "البرمجة": config.find(p => p.id === "software")?.required || [],
+    "تحليل النظم": config.find(p => p.id === "analyst")?.required || [],
+    "الدعم الفني": [
+      ...(config.find(p => p.id === "computer_tech")?.required || []),
+      ...(config.find(p => p.id === "support_tech")?.required || [])
+    ]
+  };
 };
 
-export const allStandardCoursesList = Object.keys(courseMetadata);
+export const getAllStandardCoursesList = (metadata) => Object.keys(metadata);
 
-export const recalculateEmployeeReadiness = (emp) => {
+export const recalculateEmployeeReadiness = (emp, config) => {
   if (!emp.targetPosition) return emp;
   
   // Find the assigned path
-  const path = pathsConfig.find(p => p.title === emp.targetPosition || p.targetPosition === emp.targetPosition);
+  const path = config.find(p => p.title === emp.targetPosition || p.targetPosition === emp.targetPosition);
   
   if (!path) return emp;
 
   const completed = emp.completedCourses || [];
-  const reqs = path.required;
+  const reqs = path.required || [];
   
   const satisfied = reqs.filter(r => completed.includes(r));
   const remaining = reqs.filter(r => !completed.includes(r));
   
-  const score = Math.round((satisfied.length / reqs.length) * 100);
+  const score = reqs.length > 0 ? Math.round((satisfied.length / reqs.length) * 100) : 100;
 
   return {
     ...emp,

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import GapAnalysisModal from './GapAnalysisModal';
 
-import { pathsConfig, courseMetadata, domains } from '../data/coursesData';
+import { getDomains } from '../data/coursesData';
 
-function analyzeEmployeeSkills(employee) {
+function analyzeEmployeeSkills(employee, courseMetadata, pathsConfig) {
   if (!employee || !employee.completedCourses) {
     return { 
       coreStrength: "تحت التأسيس", 
@@ -15,6 +15,8 @@ function analyzeEmployeeSkills(employee) {
     };
   }
   
+  const domains = getDomains(pathsConfig);
+
   const analysis = Object.keys(domains).map(domain => {
     const matchedCourses = employee.completedCourses.filter(c => domains[domain].includes(c));
     const certs = matchedCourses.filter(c => courseMetadata[c]?.type === "شهادة");
@@ -213,11 +215,16 @@ function getSkillInventoryExplanation(skill, val) {
   return `مستوى الجرد المعرفي المقاس بناءً على الاختبارات والدورات المنجزة.`;
 }
 
-const SmartComparison = ({ employees, setEmployees, selectedEmployee, setSelectedEmployee }) => {
-  const [showPivotModal, setShowPivotModal] = useState(false);
+const SmartComparison = ({ employees, setEmployees, selectedEmployee, setSelectedEmployee, pathsConfig, courseMetadata }) => {
   const [pivotTarget, setPivotTarget] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [isCoursesCollapsed, setIsCoursesCollapsed] = useState(true);
+
+  const employeesWithSkills = employees.map(emp => {
+    const analysis = analyzeEmployeeSkills(emp, courseMetadata, pathsConfig);
+    return { ...emp, skillsAnalysis: analysis };
+  });
 
   const handleEmployeeChange = (e) => {
     const id = Number(e.target.value);
@@ -255,7 +262,7 @@ const SmartComparison = ({ employees, setEmployees, selectedEmployee, setSelecte
     );
   }
 
-  const comparisons = calculatePathComparisons(selectedEmployee, pathsConfig);
+  const comparisons = calculatePathComparisons(selectedEmployee, pathsConfig, courseMetadata);
 
   const sortedPaths = [...comparisons].sort((a, b) => {
     if (b.totalCompatibilityScore !== a.totalCompatibilityScore) {
@@ -266,11 +273,11 @@ const SmartComparison = ({ employees, setEmployees, selectedEmployee, setSelecte
 
   const recommendedPath = sortedPaths[0];
 
-  const { coreStrength, coreStrengthScore, coreStrengthCerts, coreCourses, subSkills } = analyzeEmployeeSkills(selectedEmployee);
+  const { coreStrength, coreStrengthScore, coreStrengthCerts, coreCourses, subSkills } = analyzeEmployeeSkills(selectedEmployee, courseMetadata, pathsConfig);
 
   const handlePivotClick = (pathTitle) => {
     setPivotTarget(pathTitle);
-    setShowPivotModal(true);
+    setIsModalOpen(true);
   };
 
   const handlePivotSubmit = () => {
@@ -294,7 +301,7 @@ const SmartComparison = ({ employees, setEmployees, selectedEmployee, setSelecte
       }
       return emp;
     }));
-    setShowPivotModal(false);
+    setIsModalOpen(false);
     setToastMessage(`تم تحويل مسار الموظف ${selectedEmployee.fullName} إلى ${pivotTarget} بنجاح!`);
     setTimeout(() => setToastMessage(""), 4000);
   };

@@ -394,3 +394,19 @@ export const isHiddenItTalent = (emp) => {
 
   return false;
 };
+
+export const orgStructure = [
+  { department: "قسم الدعم الفني", role: "فني كمبيوتر", target: 4 },
+  { department: "قسم الدعم الفني", role: "فني شبكات", target: 3 },
+  { department: "قسم الدعم الفني", role: "دعم فني أول", target: 2 },
+  { department: "قسم تقنية المعلومات", role: "مهندس شبكات", target: 6 },
+  { department: "قسم تقنية المعلومات", role: "مهندس ذكاء اصطناعي", target: 5 },
+  { department: "قسم تقنية المعلومات", role: "مطور برمجيات", target: 8 },
+  { department: "قسم تقنية المعلومات", role: "أخصائي أمن سيبراني", target: 6 },
+  { department: "قسم تقنية المعلومات", role: "محلل بيانات", target: 4 },
+  { department: "المعهد", role: "مدرب تقني", target: 5 },
+  { department: "الكلية", role: "أكاديمي تقني", target: 5 },
+  { department: "قسم تقنية المعلومات", role: "مدير مشاريع تقنية", target: 3 },
+  { department: "قسم الدعم الفني", role: "رئيس قسم", target: 1 },
+  { department: "قسم تقنية المعلومات", role: "رئيس قسم", target: 1 }
+];

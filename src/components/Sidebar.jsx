@@ -1,7 +1,6 @@
 import React from 'react';
-import ExcelImporter from './ExcelImporter';
 
-const Sidebar = ({ activeScreen, setActiveScreen, onOpenPresentation, onImport }) => {
+const Sidebar = ({ activeScreen, setActiveScreen, onOpenPresentation }) => {
   return (
     <aside className="w-full lg:w-64 bg-white border-l border-slate-200 p-4 flex flex-col gap-2">
       <p className="text-[10px] text-slate-400 font-bold tracking-wider mb-2 px-3">القائمة التشغيلية</p>
@@ -64,9 +63,6 @@ const Sidebar = ({ activeScreen, setActiveScreen, onOpenPresentation, onImport }
             الموظفون العاملون خارج قسم تقنية المعلومات يمثلون تشتتاً للموهبة. اضغط على أي بطاقة موظف لاستعراض تفاصيل خطته العشرية.
           </p>
         </div>
-        
-        {/* Excel Importer Feature */}
-        <ExcelImporter onImport={onImport} />
       </div>
     </aside>
   );

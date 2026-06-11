@@ -105,19 +105,44 @@ const positionsData = [
   }
 ];
 
-const PositionRequirements = () => {
+const PositionRequirements = ({ pathsConfig, courseMetadata }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedIndex, setExpandedIndex] = useState(null);
+
+  // Derive dynamic positions data from pathsConfig and courseMetadata
+  const dynamicPositionsData = pathsConfig && courseMetadata ? positionsData.map(pos => {
+    const matchingPath = pathsConfig.find(p => p.title === pos.title || p.targetPosition === pos.title || p.title.includes(pos.title));
+    if (!matchingPath) return pos;
+
+    const allReqs = matchingPath.required || [];
+    const newGatekeeper = [];
+    const newEnablement = [];
+
+    allReqs.forEach(cName => {
+      const meta = courseMetadata[cName] || { level: "مبتدئ", type: "دورة" };
+      if (meta.level === "متقدم") {
+        newEnablement.push({ name: cName, level: meta.level, type: meta.type });
+      } else {
+        newGatekeeper.push({ name: cName, level: meta.level, type: meta.type });
+      }
+    });
+
+    return {
+      ...pos,
+      gatekeeper: newGatekeeper.length > 0 ? newGatekeeper : pos.gatekeeper,
+      enablement: newEnablement.length > 0 || newGatekeeper.length > 0 ? newEnablement : pos.enablement
+    };
+  }) : positionsData;
 
   const toggleExpand = (index) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
   const getFilteredPositions = () => {
-    if (!searchQuery.trim()) return positionsData;
+    if (!searchQuery.trim()) return dynamicPositionsData;
     const query = searchQuery.toLowerCase();
 
-    return positionsData.filter(pos => {
+    return dynamicPositionsData.filter(pos => {
       const matchTitle = pos.title.toLowerCase().includes(query) || pos.englishTitle.toLowerCase().includes(query);
       const matchDesc = pos.description.toLowerCase().includes(query);
       const matchGatekeeper = pos.gatekeeper.some(c => c.name.toLowerCase().includes(query));
