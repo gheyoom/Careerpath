@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const EmployeeGrid = ({ filteredEmployees, selectedEmployee, setSelectedEmployee, viewMode = 'list' }) => {
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
   const getReadinessClasses = (emp) => {
     const score = emp.readinessScore;
     const needsCourses = emp.currentRequirements && emp.currentRequirements.length > 0;
@@ -38,6 +40,123 @@ const EmployeeGrid = ({ filteredEmployees, selectedEmployee, setSelectedEmployee
     if (title.includes("مبرمج") || title.includes("محلل")) return "الدرجة 4";
     return "الدرجة 4";
   };
+
+  if (viewMode === 'executive') {
+    let sortedEmployees = [...filteredEmployees];
+    if (sortConfig.key) {
+      sortedEmployees.sort((a, b) => {
+        let aVal = a[sortConfig.key];
+        let bVal = b[sortConfig.key];
+        
+        // special cases
+        if (sortConfig.key === 'name') {
+          aVal = a.fullName;
+          bVal = b.fullName;
+        } else if (sortConfig.key === 'position') {
+          aVal = a.currentPosition;
+          bVal = b.currentPosition;
+        } else if (sortConfig.key === 'department') {
+          aVal = a.currentDepartment;
+          bVal = b.currentDepartment;
+        } else if (sortConfig.key === 'targetPath') {
+          aVal = a.targetPosition;
+          bVal = b.targetPosition;
+        } else if (sortConfig.key === 'courses') {
+          aVal = a.currentRequirements ? a.currentRequirements.length : 0;
+          bVal = b.currentRequirements ? b.currentRequirements.length : 0;
+        }
+
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    const handleSort = (key) => {
+      let direction = 'asc';
+      if (sortConfig.key === key && sortConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key) => {
+      if (sortConfig.key !== key) return <i className="fa-solid fa-sort ml-2 opacity-30"></i>;
+      return sortConfig.direction === 'asc' ? <i className="fa-solid fa-sort-up ml-2 text-blue-500"></i> : <i className="fa-solid fa-sort-down ml-2 text-blue-500"></i>;
+    };
+
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm mt-2">
+        <div className="overflow-x-auto">
+          <table className="w-full text-right text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+              <tr>
+                <th className="py-3 px-4 w-20 cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('id')}>
+                  الرقم {getSortIcon('id')}
+                </th>
+                <th className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('name')}>
+                  الاسم / الرتبة {getSortIcon('name')}
+                </th>
+                <th className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('position')}>
+                  المنصب {getSortIcon('position')}
+                </th>
+                <th className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('department')}>
+                  القسم {getSortIcon('department')}
+                </th>
+                <th className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('targetPath')}>
+                  المسار المستهدف {getSortIcon('targetPath')}
+                </th>
+                <th className="py-3 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('readinessScore')}>
+                  الجاهزية {getSortIcon('readinessScore')}
+                </th>
+                <th className="py-3 px-4 cursor-pointer hover:bg-slate-100 transition-colors select-none" onClick={() => handleSort('courses')}>
+                  الدورات المطلوبة {getSortIcon('courses')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedEmployees.map(emp => {
+                const isSelected = selectedEmployee && selectedEmployee.id === emp.id;
+                const rc = getReadinessClasses(emp);
+                return (
+                  <tr 
+                    key={emp.id} 
+                    onClick={() => setSelectedEmployee(emp)}
+                    className={`border-b border-slate-100 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-slate-50'}`}
+                  >
+                    <td className="py-3 px-4 text-slate-500 font-semibold text-xs">{emp.id}</td>
+                    <td className="py-3 px-4 font-bold text-slate-800 text-xs flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${rc.dot}`}></span>
+                      {emp.hrDetails?.jobGrade && emp.hrDetails.jobGrade !== 'غير محدد' ? `${formatGrade(emp.hrDetails.jobGrade)} / ${emp.fullName}` : emp.fullName}
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 text-xs">{emp.currentPosition}</td>
+                    <td className="py-3 px-4 text-slate-600 text-xs">{emp.currentDepartment}</td>
+                    <td className="py-3 px-4 text-slate-600 text-center font-bold text-xs">{emp.targetPosition}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2 py-1 rounded bg-slate-100 font-bold text-[10px] ${rc.text}`}>{emp.readinessScore}%</span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-1 flex-wrap">
+                        {emp.currentRequirements && emp.currentRequirements.length > 0 ? (
+                          <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200">
+                            مطلوب {emp.currentRequirements.length} دورات
+                          </span>
+                        ) : (
+                          <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
+                            مكتمل
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "flex flex-col gap-3"}>
