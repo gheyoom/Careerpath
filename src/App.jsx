@@ -13,69 +13,66 @@ import CourseUploader from './components/CourseUploader';
 import { initialEmployees, isHiddenItTalent, orgStructure as defaultOrgStructure } from './data/mockData';
 
 function App() {
-  const [employees, setEmployees] = useState(() => {
-    const saved = localStorage.getItem('careerpath_employees');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse saved employees", e);
-      }
-    }
-    return initialEmployees;
-  });
+  const [employees, setEmployees] = useState(initialEmployees);
+  const [structure, setStructure] = useState(defaultOrgStructure);
+  const [pathsConfigState, setPathsConfigState] = useState(defaultPathsConfig);
+  const [courseMetadataState, setCourseMetadataState] = useState(defaultCourseMetadata);
+  const [isLoaded, setIsLoaded] = useState(false);
 
+  // Initial Load from Local Server API
   useEffect(() => {
+    fetch('http://localhost:3333/api/data')
+      .then(res => res.json())
+      .then(data => {
+        if (data.employees && data.employees.length > 0) setEmployees(data.employees);
+        if (data.structure && Object.keys(data.structure).length > 0) setStructure(data.structure);
+        if (data.coursesConfig && data.coursesConfig.pathsConfig && data.coursesConfig.pathsConfig.length > 0) {
+          setPathsConfigState(data.coursesConfig.pathsConfig);
+          setCourseMetadataState(data.coursesConfig.courseMetadata);
+        }
+        setIsLoaded(true);
+      })
+      .catch(err => {
+        console.error("Failed to load from local server, using localStorage fallback", err);
+        // Fallback to localStorage
+        const savedEmp = localStorage.getItem('careerpath_employees');
+        if (savedEmp) setEmployees(JSON.parse(savedEmp));
+        const savedStr = localStorage.getItem('careerpath_org_structure');
+        if (savedStr) setStructure(JSON.parse(savedStr));
+        const savedPath = localStorage.getItem('careerpath_paths_config');
+        if (savedPath) setPathsConfigState(JSON.parse(savedPath));
+        const savedMeta = localStorage.getItem('careerpath_course_metadata');
+        if (savedMeta) setCourseMetadataState(JSON.parse(savedMeta));
+        setIsLoaded(true);
+      });
+  }, []);
+
+  // Save changes to Server and LocalStorage
+  useEffect(() => {
+    if (!isLoaded) return;
+    fetch('http://localhost:3333/api/employees', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(employees)
+    }).catch(() => {});
     localStorage.setItem('careerpath_employees', JSON.stringify(employees));
-  }, [employees]);
-
-  const [structure, setStructure] = useState(() => {
-    const saved = localStorage.getItem('careerpath_org_structure');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse saved structure", e);
-      }
-    }
-    return defaultOrgStructure;
-  });
+  }, [employees, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    fetch('http://localhost:3333/api/structure', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(structure)
+    }).catch(() => {});
     localStorage.setItem('careerpath_org_structure', JSON.stringify(structure));
-  }, [structure]);
-
-  const [pathsConfigState, setPathsConfigState] = useState(() => {
-    const saved = localStorage.getItem('careerpath_paths_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return defaultPathsConfig;
-  });
-
-  const [courseMetadataState, setCourseMetadataState] = useState(() => {
-    const saved = localStorage.getItem('careerpath_course_metadata');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return defaultCourseMetadata;
-  });
+  }, [structure, isLoaded]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    fetch('http://localhost:3333/api/courses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ pathsConfig: pathsConfigState, courseMetadata: courseMetadataState })
+    }).catch(() => {});
     localStorage.setItem('careerpath_paths_config', JSON.stringify(pathsConfigState));
-  }, [pathsConfigState]);
-
-  useEffect(() => {
     localStorage.setItem('careerpath_course_metadata', JSON.stringify(courseMetadataState));
-  }, [courseMetadataState]);
+  }, [pathsConfigState, courseMetadataState, isLoaded]);
 
   const handleImportEmployees = (newEmployees) => {
     setEmployees(prev => {
